@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NurseFlow - {% block title %}Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --sidebar-width: 260px; --primary-color: #0d6efd; --bg-light: #f4f7f9; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-light); overflow-x: hidden; }
+        .wrapper { display: flex; width: 100%; align-items: stretch; }
+        #sidebar {
+            min-width: var(--sidebar-width); max-width: var(--sidebar-width);
+            background: #ffffff; color: #1a1a2e; transition: all 0.3s;
+            height: 100vh; position: sticky; top: 0;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.05); border-right: 1px solid #e9ecef;
+            display: flex; flex-direction: column; z-index: 1000;
+        }
+        #sidebar .sidebar-header { padding: 1.5rem 1.5rem 0.5rem 1.5rem; border-bottom: 1px solid #e9ecef; }
+        #sidebar .sidebar-header h3 { font-weight: 700; color: var(--primary-color); }
+        #sidebar .sidebar-header h3 i { color: #0dcaf0; }
+        .avatar-circle { width: 36px; height: 36px; background: #0d6efd; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 14px; flex-shrink: 0; }
+        #sidebar ul.components { padding: 1rem 0; flex: 1; }
+        #sidebar ul li a { padding: 0.75rem 1.5rem; font-size: 0.95rem; display: block; color: #3a3a5c; text-decoration: none; transition: 0.2s; border-left: 3px solid transparent; }
+        #sidebar ul li a:hover, #sidebar ul li a.active { background: #f0f5ff; color: var(--primary-color); border-left-color: var(--primary-color); }
+        #sidebar ul li a i { margin-right: 0.75rem; width: 20px; text-align: center; }
+        #sidebar .sidebar-footer { padding: 1rem 1.5rem; border-top: 1px solid #e9ecef; font-size: 0.85rem; }
+        #sidebar .sidebar-footer a { color: #dc3545; text-decoration: none; font-weight: 500; }
+        #sidebar .sidebar-footer a:hover { text-decoration: underline; }
+        #content { width: 100%; min-height: 100vh; padding: 2rem; }
+        .alert-container { position: fixed; top: 20px; right: 20px; z-index: 9999; width: 380px; max-width: 90%; }
+        .alert { border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); border: none; }
+        #sidebarToggle { z-index: 9999; display: none; }
+        @media (max-width: 768px) {
+            #sidebarToggle { display: block; }
+            #sidebar { min-width: 0; max-width: 0; overflow: hidden; transition: max-width 0.3s ease; position: fixed; top: 0; left: 0; height: 100vh; z-index: 9998; background: #fff; box-shadow: 2px 0 12px rgba(0,0,0,0.15); }
+            #sidebar.active { min-width: 260px; max-width: 260px; overflow: visible; }
+            #sidebar .sidebar-header h3 span, #sidebar .sidebar-header .user-info span, #sidebar ul li a span, #sidebar .sidebar-footer span { display: inline; }
+            #sidebar ul li a { padding: 0.75rem 1.5rem; text-align: left; }
+            #sidebar ul li a i { margin-right: 0.75rem; }
+            #content { padding: 1rem; }
+        }
+        .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+        .shift-badge {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+<button class="btn btn-primary position-fixed top-0 start-0 m-2" type="button" id="sidebarToggle" style="z-index: 9999; display:none;">
+    <i class="fas fa-bars"></i>
+</button>
+<div class="alert-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+<div class="wrapper">
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-heartbeat"></i> <span>NurseFlow</span></h3>
+            <div class="d-flex align-items-center mt-2">
+                <div class="avatar-circle me-2">{{ user_name[:2].upper() if user_name else 'U' }}</div>
+                <div>
+                    <div><span>{{ user_name or 'Visitante' }}</span></div>
+                    <div><small class="text-muted">{{ user_role or '' }}</small></div>
+                    <!-- BADGE DE PLANTÃO -->
+                    {% if user_role != 'paciente' %}
+                        {% if shift_status == 'em_andamento' %}
+                            <span class="badge bg-success shift-badge"><i class="fas fa-clock"></i> Em Plantão</span>
+                        {% elif shift_status == 'agendado' %}
+                            <span class="badge bg-warning text-dark shift-badge"><i class="fas fa-clock"></i> Agendado</span>
+                        {% else %}
+                            <span class="badge bg-secondary shift-badge"><i class="fas fa-clock"></i> Fora do Turno</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <ul class="components">
+            <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
+            {% if user_role != 'paciente' %}
+                <li><a href="{{ url_for('patient_list') }}" class="{% if 'patient' in request.endpoint and request.endpoint not in ['vitals_list', 'notes_list'] %}active{% endif %}"><i class="fas fa-users"></i> <span>Pacientes</span></a></li>
+                <li><a href="{{ url_for('vitals_list') }}" class="{% if request.endpoint == 'vitals_list' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Sinais Vitais</span></a></li>
+                <li><a href="{{ url_for('notes_list') }}" class="{% if request.endpoint == 'notes_list' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Anotações</span></a></li>
+                <li><a href="{{ url_for('my_shift_status') }}" class="{% if 'shift' in request.endpoint %}active{% endif %}"><i class="fas fa-calendar-check"></i> <span>Plantão</span></a></li>
+                {% if user_role == 'gestor' %}
+                    <li><a href="{{ url_for('assign_shift') }}" class="{% if request.endpoint == 'assign_shift' %}active{% endif %}"><i class="fas fa-pen-alt"></i> <span>Atribuir Escala</span></a></li>
+                {% endif %}
+            {% endif %}
+        </ul>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+        </div>
+    </nav>
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(el) {
+            var alert = new bootstrap.Alert(el);
+            alert.close();
+        });
+    }, 5000);
+    document.getElementById('sidebarToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+    if (window.innerWidth <= 768) { document.getElementById('sidebarToggle').style.display = 'block'; }
+    window.addEventListener('resize', function() {
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebarToggle').style.display = 'block';
+        } else {
+            document.getElementById('sidebarToggle').style.display = 'none';
+            document.getElementById('sidebar').classList.remove('active');
+        }
+    });
+</script>
+</body>
+</html>

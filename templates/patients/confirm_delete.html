@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Confirmar Exclusão{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 text-center">
+            <i class="fas fa-exclamation-triangle fa-4x text-danger mb-3"></i>
+            <h4 class="mb-3">Confirmar exclusão</h4>
+            <p class="text-muted">Você está prestes a <strong>desativar</strong> o paciente: <br><strong class="text-dark fs-5">{{ patient.name }}</strong></p>
+            <p class="text-muted small">Esta ação não exclui permanentemente, mas o paciente não aparecerá mais na lista ativa.</p>
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <form method="POST" action="{{ url_for('delete_patient', id=patient.id) }}">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-check"></i> Confirmar desativação</button>
+                </form>
+                <a href="{{ url_for('patient_detail', id=patient.id) }}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

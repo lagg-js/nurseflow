@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-user-circle text-primary me-2"></i>{{ patient.name }}</h2>
+        <p class="text-muted mb-0">
+            <i class="fas fa-calendar-alt me-1"></i> Nascimento: {{ patient.birth_date.strftime('%d/%m/%Y') }}
+            {% if patient.cpf %} <span class="mx-2">|</span> <i class="fas fa-id-card me-1"></i> CPF: {{ patient.cpf }} {% endif %}
+        </p>
+    </div>
+    <div>
+        {% if user_role != 'paciente' %}
+            <a href="{{ url_for('edit_patient', id=patient.id) }}" class="btn btn-outline-primary"><i class="fas fa-edit"></i> Editar</a>
+            {% if user_role == 'gestor' %}
+                <a href="{{ url_for('confirm_delete_patient', id=patient.id) }}" class="btn btn-outline-danger"><i class="fas fa-trash"></i> Desativar</a>
+                <a href="{{ url_for('export_vitals_csv', id=patient.id) }}" class="btn btn-outline-success"><i class="fas fa-file-csv"></i> Exportar CSV</a>
+            {% endif %}
+        {% endif %}
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card p-3 mb-4 border-0 shadow-sm">
+            <h5><i class="fas fa-phone-alt text-primary me-2"></i>Contato</h5>
+            <div class="row">
+                <div class="col-md-6"><small class="text-muted d-block">Telefone</small><p>{{ patient.phone or 'Não informado' }}</p></div>
+                <div class="col-md-6"><small class="text-muted d-block">Contato de Emergência</small><p><strong>{{ patient.emergency_contact or 'Não informado' }}</strong> — {{ patient.emergency_phone or 'Sem telefone' }}</p></div>
+            </div>
+        </div>
+
+        <div class="card p-3 mb-4 border-0 shadow-sm">
+            <h5><i class="fas fa-notes-medical text-primary me-2"></i>Informações Clínicas</h5>
+            <div class="mb-3 p-2 rounded" style="background:#f8f9fa;">
+                <small class="text-muted d-block mb-1"><i class="fas fa-exclamation-triangle me-1"></i>Alergias</small>
+                {% set status = patient.allergy_status.value if patient.allergy_status else 'nao_informado' %}
+                {% if status == 'nao_informado' %}
+                    <span class="badge bg-secondary p-2"><i class="fas fa-minus-circle me-1"></i> Não informado</span>
+                    <small class="text-muted d-block mt-1">A informação ainda não foi verificada.</small>
+                {% elif status == 'sem_alergias_conhecidas' %}
+                    <span class="badge bg-success p-2"><i class="fas fa-check-circle me-1"></i> Sem alergias conhecidas</span>
+                {% elif status == 'com_alergias' %}
+                    <span class="badge bg-warning text-dark p-2"><i class="fas fa-exclamation-circle me-1"></i> Alergias registradas</span>
+                    <div class="alert alert-warning mt-2 mb-0"><i class="fas fa-prescription-bottle me-2"></i> {{ patient.allergies_description or 'Descrição não detalhada' }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <small class="text-muted d-block mb-1"><i class="fas fa-stethoscope me-1"></i>Informações clínicas relevantes</small>
+                <p class="mb-0">{{ patient.clinical_info or 'Nenhuma informação adicional.' }}</p>
+            </div>
+        </div>
+
+        {% if user_role != 'paciente' %}
+        <div class="card p-3 mb-4 border-0 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-heartbeat text-primary me-2"></i>Sinais Vitais</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#vitalForm"><i class="fas fa-plus"></i> Registrar</button>
+            </div>
+            <div class="collapse mt-3" id="vitalForm">
+                <form method="POST" action="{{ url_for('add_vital_sign', id=patient.id) }}" class="border p-3 rounded bg-light">
+                    <div class="row g-2">
+                        <div class="col-4"><label class="small">Sistólica *</label><input type="number" name="systolic" class="form-control form-control-sm" placeholder="120" required></div>
+                        <div class="col-4"><label class="small">Diastólica *</label><input type="number" name="diastolic" class="form-control form-control-sm" placeholder="80" required></div>
+                        <div class="col-4"><label class="small">FC (bpm)</label><input type="number" name="heart_rate" class="form-control form-control-sm" placeholder="72"></div>
+                        <div class="col-3"><label class="small">FR (irpm)</label><input type="number" name="respiratory_rate" class="form-control form-control-sm" placeholder="16"></div>
+                        <div class="col-3"><label class="small">Temp (°C)</label><input type="number" step="0.1" name="temperature" class="form-control form-control-sm" placeholder="36.5"></div>
+                        <div class="col-3"><label class="small">SpO₂ (%)</label><input type="number" name="oxygen_saturation" class="form-control form-control-sm" placeholder="98"></div>
+                        <div class="col-3"><label class="small">Dor (0-10)</label><input type="number" name="pain_scale" class="form-control form-control-sm" placeholder="2"></div>
+                        <div class="col-12"><label class="small">Observações</label><input type="text" name="notes" class="form-control form-control-sm" placeholder="Ex: Paciente consciente..."></div>
+                        <div class="col-12"><button type="submit" class="btn btn-primary btn-sm w-100">Salvar Sinais</button></div>
+                    </div>
+                </form>
+            </div>
+            <div class="mt-3">
+                {% if vital_signs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead><tr><th>Data/Hora</th><th>PA</th><th>FC</th><th>FR</th><th>Temp</th><th>SpO₂</th><th>Dor</th><th>Ações</th></tr></thead>
+                            <tbody>
+                            {% for v in vital_signs[:10] %}
+                                <tr>
+                                    <td>{{ v.record_date.strftime('%d/%m %H:%M') }}</td>
+                                    <td>{{ v.systolic }}/{{ v.diastolic }}</td>
+                                    <td>{{ v.heart_rate }}</td>
+                                    <td>{{ v.respiratory_rate }}</td>
+                                    <td>{{ v.temperature }}</td>
+                                    <td>{{ v.oxygen_saturation }}</td>
+                                    <td>{{ v.pain_scale }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('delete_vital_sign', id=v.id) }}" style="display:inline;" onsubmit="return confirm('Remover este registro?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {% if vital_signs|length > 10 %}<small class="text-muted">Mostrando os 10 mais recentes. <a href="{{ url_for('vitals_list') }}?patient_id={{ patient.id }}">Ver todos</a></small>{% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">Nenhum sinal vital registrado.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card p-3 border-0 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-clipboard-list text-primary me-2"></i>Anotações de Enfermagem</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#noteForm"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+            <div class="collapse mt-3" id="noteForm">
+                <form method="POST" action="{{ url_for('add_nursing_note', id=patient.id) }}" class="border p-3 rounded bg-light">
+                    <div class="mb-2"><label class="small">Tipo</label><select name="note_type" class="form-select form-select-sm"><option value="evolucao">Evolução</option><option value="ocorrencia">Ocorrência</option></select></div>
+                    <div class="mb-2"><label class="small">Conteúdo</label><textarea name="content" class="form-control form-control-sm" rows="3" placeholder="Descreva a evolução ou ocorrência..." required></textarea></div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Salvar Anotação</button>
+                </form>
+            </div>
+            <div class="mt-3">
+                {% if nursing_notes %}
+                    {% for note in nursing_notes %}
+                        <div class="border-bottom py-2">
+                            <div class="d-flex justify-content-between">
+                                <span><span class="badge {% if note.note_type.value == 'evolucao' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ note.note_type.value }}</span> <small class="text-muted ms-2">{{ note.created_at.strftime('%d/%m/%Y às %H:%M') }} — {{ note.created_by }}</small></span>
+                                <form method="POST" action="{{ url_for('delete_nursing_note', id=note.id) }}" style="display:inline;" onsubmit="return confirm('Remover esta anotação?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i></button>
+                                </form>
+                            </div>
+                            <p class="mb-1 mt-1">{{ note.content }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small mb-0">Nenhuma anotação registrada.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-3 mb-3 border-0 shadow-sm">
+            <h6><i class="fas fa-history text-primary me-2"></i>Rastreabilidade</h6>
+            <small class="text-muted d-block"><i class="fas fa-user-plus me-1"></i> Criado por: <strong>{{ patient.created_by }}</strong></small>
+            <small class="text-muted d-block ms-3">{{ patient.created_at.strftime('%d/%m/%Y às %H:%M') if patient.created_at else '—' }}</small>
+            <small class="text-muted d-block mt-2"><i class="fas fa-user-edit me-1"></i> Atualizado por: <strong>{{ patient.updated_by }}</strong></small>
+            <small class="text-muted d-block ms-3">{{ patient.updated_at.strftime('%d/%m/%Y às %H:%M') if patient.updated_at else '—' }}</small>
+        </div>
+        <div class="alert alert-info small"><i class="fas fa-shield-alt me-2"></i><strong>Segurança:</strong> "Não informado" ≠ "Sem alergias".</div>
+        {% if user_role != 'paciente' %}
+        <div class="d-grid gap-2">
+            <a href="{{ url_for('vitals_list') }}?patient_id={{ patient.id }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-heartbeat"></i> Ver histórico de sinais</a>
+            <a href="{{ url_for('notes_list') }}?patient_id={{ patient.id }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-clipboard-list"></i> Ver histórico de anotações</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
