@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+{% if user_role == 'paciente' %}
+<!-- VISÃO DO PACIENTE -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card p-4 text-center border-0 shadow-sm">
+            <i class="fas fa-user-circle fa-4x text-primary mb-3"></i>
+            <h4>{{ user_name }}</h4>
+            <p class="text-muted">Bem-vindo ao NurseFlow</p>
+            <a href="{{ url_for('patient_detail', id=session.get('patient_id')) }}" class="btn btn-primary">
+                <i class="fas fa-address-card"></i> Ver minha ficha
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-4 text-center border-0 shadow-sm">
+            <i class="fas fa-clipboard-list fa-4x text-info mb-3"></i>
+            <h4>Resumo</h4>
+            <p><strong>{{ total_vitals }}</strong> sinais vitais registrados</p>
+            <p><strong>{{ total_notes }}</strong> anotações</p>
+            {% if allergy_alerts > 0 %}
+                <span class="badge bg-danger">⚠️ Alergias registradas</span>
+            {% else %}
+                <span class="badge bg-success">Sem alergias informadas</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0"><h5 class="mb-0"><i class="fas fa-history me-2"></i>Minhas atividades</h5></div>
+            <div class="card-body">
+                {% if recent_activities %}
+                    <ul class="list-unstyled">
+                    {% for activity in recent_activities %}
+                        <li class="border-bottom py-2 d-flex justify-content-between">
+                            <span><i class="fas fa-user-circle text-muted me-2"></i><strong>{{ activity.user }}</strong> {{ activity.action }} <span class="text-primary">"{{ activity.target }}"</span></span>
+                            <span class="text-muted small">{{ activity.time }}</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Nenhuma atividade registrada para você.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- VISÃO PARA PROFISSIONAIS E GESTORES -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('patient_list') }}" class="btn btn-success"><i class="fas fa-heartbeat"></i> Registrar Sinal Vital</a>
+            <a href="{{ url_for('patient_list') }}" class="btn btn-info text-white"><i class="fas fa-clipboard-list"></i> Nova Anotação</a>
+            <a href="{{ url_for('new_patient') }}" class="btn btn-outline-secondary"><i class="fas fa-user-plus"></i> Novo Paciente</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card card-hover p-3 text-center border-0 shadow-sm">
+            <i class="fas fa-users fa-3x text-primary mb-2"></i>
+            <h3>{{ total_patients }}</h3>
+            <p class="text-muted mb-0">Pacientes cadastrados</p>
+            <a href="{{ url_for('patient_list') }}" class="btn btn-sm btn-outline-primary mt-2">Ver todos</a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-hover p-3 text-center border-0 shadow-sm">
+            <i class="fas fa-heartbeat fa-3x text-danger mb-2"></i>
+            <h3>{{ total_vitals }}</h3>
+            <p class="text-muted mb-0">Sinais vitais registrados</p>
+            <a href="{{ url_for('vitals_list') }}" class="btn btn-sm btn-outline-danger mt-2">Ver histórico</a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-hover p-3 text-center border-0 shadow-sm">
+            <i class="fas fa-clipboard-list fa-3x text-warning mb-2" style="color:#d39e00 !important;"></i>
+            <h3>{{ total_notes }}</h3>
+            <p class="text-muted mb-0">Anotações de enfermagem</p>
+            <a href="{{ url_for('notes_list') }}" class="btn btn-sm" style="background-color:#d39e00; color:#fff; border-color:#d39e00;">Ver histórico</a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-hover p-3 text-center border-0 shadow-sm" style="border-left: 4px solid #dc3545 !important;">
+            <i class="fas fa-exclamation-triangle fa-3x text-danger mb-2"></i>
+            <h3>{{ allergy_alerts }}</h3>
+            <p class="text-muted mb-0">Pacientes com alergias</p>
+            <a href="{{ url_for('patient_list', allergy_status='com_alergias') }}" class="btn btn-sm btn-danger mt-2">
+                <i class="fas fa-exclamation-circle"></i> Ver pacientes alérgicos
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Atividade recente</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <form method="GET" class="d-flex align-items-center gap-1" id="filterForm">
+                        <label class="small me-1">Período:</label>
+                        <select name="days" class="form-select form-select-sm" style="width:auto;" onchange="document.getElementById('filterForm').submit()">
+                            <option value="1" {% if days==1 %}selected{% endif %}>Hoje</option>
+                            <option value="7" {% if days==7 %}selected{% endif %}>Últimos 7 dias</option>
+                            <option value="30" {% if days==30 %}selected{% endif %}>Últimos 30 dias</option>
+                            <option value="0" {% if days==0 %}selected{% endif %}>Todos</option>
+                        </select>
+                    </form>
+                    <a href="{{ url_for('notes_list') }}" class="btn btn-sm btn-outline-secondary">Ver todas</a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                    <ul class="list-unstyled">
+                    {% for activity in recent_activities %}
+                        <li class="border-bottom py-2 d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-user-circle text-muted me-2"></i>
+                                <strong>{{ activity.user }}</strong> {{ activity.action }}
+                                {% if activity.patient_id %}
+                                    <a href="{{ url_for('patient_detail', id=activity.patient_id) }}" class="text-primary">"{{ activity.target }}"</a>
+                                {% else %}
+                                    <span class="text-muted">"{{ activity.target }}"</span>
+                                {% endif %}
+                            </span>
+                            <span class="text-muted small">{{ activity.time }}</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                    <div class="text-center mt-2">
+                        <a href="{{ url_for('notes_list') }}" class="btn btn-sm btn-outline-secondary">Ver todas as atividades</a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h6>Nenhuma atividade registrada no período</h6>
+                        <p class="text-muted">Comece adicionando um paciente ou registrando sinais vitais.</p>
+                        <a href="{{ url_for('new_patient') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus-circle"></i> Cadastrar paciente</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user_role == 'gestor' %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-info-circle me-2"></i> Modo Gestor: você pode popular o banco com dados fictícios para demonstração.</span>
+            <a href="{{ url_for('seed_database') }}" class="btn btn-sm btn-success" onclick="return confirm('Isso vai APAGAR todos os dados e criar dados fictícios. Continuar?');">
+                <i class="fas fa-database"></i> Popular Dados
+            </a>
+        </div>
+    </div>
+</div>
+<!-- Dentro da visão para profissionais, após os atalhos rápidos -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 border-0 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6><i class="fas fa-calendar-check text-primary"></i> Meu Plantão</h6>
+                    {% if shift_status == 'em_andamento' %}
+                        <span class="badge bg-success">Em andamento</span>
+                    {% elif shift_status == 'agendado' %}
+                        <span class="badge bg-warning text-dark">Agendado</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Fora do turno</span>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('my_shift_status') }}" class="btn btn-sm btn-outline-primary">Ver detalhes</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 border-0 shadow-sm">
+            <h6><i class="fas fa-file-medical-alt text-success"></i> Passagem de Plantão</h6>
+            <a href="{{ url_for('generate_handover') }}" class="btn btn-sm btn-success mt-1">Gerar Relatório</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

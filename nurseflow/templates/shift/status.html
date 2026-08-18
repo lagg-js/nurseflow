@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Meu Plantão{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calendar-check text-primary me-2"></i>Meu Plantão</h2>
+</div>
+
+<!-- Plantão atual -->
+<div class="card border-0 shadow-sm p-4 mb-4">
+    <h5>Plantão Atual</h5>
+    {% if current_shift %}
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <p><strong>Data:</strong> {{ current_shift.shift_date.strftime('%d/%m/%Y') }}</p>
+                <p><strong>Turno:</strong> {{ current_shift.shift_type.value }}</p>
+                <p><strong>Horário:</strong> {{ current_shift.start_time.strftime('%H:%M') }} - {{ current_shift.end_time.strftime('%H:%M') }}</p>
+                <p><strong>Status:</strong> 
+                    {% if current_shift.status.value == 'em_andamento' %}
+                        <span class="badge bg-success">Em andamento</span>
+                    {% elif current_shift.status.value == 'agendado' %}
+                        <span class="badge bg-warning text-dark">Agendado</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ current_shift.status.value }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-6">
+                {% if current_shift.status.value == 'agendado' %}
+                    <form method="POST" action="{{ url_for('my_shift_status') }}">
+                        <input type="hidden" name="action" value="start_shift">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-play"></i> Iniciar Plantão</button>
+                    </form>
+                {% elif current_shift.status.value == 'em_andamento' %}
+                    <form method="POST" action="{{ url_for('my_shift_status') }}" onsubmit="return confirm('Finalizar plantão e gerar relatório de passagem?');">
+                        <input type="hidden" name="action" value="end_shift">
+                        <button type="submit" class="btn btn-danger"><i class="fas fa-stop"></i> Finalizar Plantão</button>
+                    </form>
+                    <a href="{{ url_for('generate_handover') }}" class="btn btn-info mt-2"><i class="fas fa-file-medical-alt"></i> Gerar Relatório</a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <p class="text-muted">Nenhum plantão agendado para hoje.</p>
+    {% endif %}
+</div>
+
+<!-- Solicitações de troca pendentes -->
+{% if pending_swaps %}
+<div class="card border-0 shadow-sm p-4 mb-4">
+    <h5><i class="fas fa-exchange-alt text-warning"></i> Solicitações de Troca Pendentes</h5>
+    {% for swap in pending_swaps %}
+        <div class="border-bottom py-2">
+            <p><strong>{{ swap.requester.full_name }}</strong> solicita trocar o plantão de <strong>{{ swap.shift_assignment.shift_date.strftime('%d/%m') }}</strong> ({{ swap.shift_assignment.shift_type.value }})</p>
+            <p><em>Motivo:</em> {{ swap.reason or 'Não informado' }}</p>
+            <div class="d-flex gap-2">
+                <form method="POST" action="{{ url_for('my_shift_status') }}">
+                    <input type="hidden" name="action" value="swap_accept">
+                    <input type="hidden" name="swap_id" value="{{ swap.id }}">
+                    <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-check"></i> Aceitar</button>
+                </form>
+                <form method="POST" action="{{ url_for('my_shift_status') }}">
+                    <input type="hidden" name="action" value="swap_reject">
+                    <input type="hidden" name="swap_id" value="{{ swap.id }}">
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-times"></i> Rejeitar</button>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Histórico e próximos plantões -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-3">
+            <h6>📋 Próximos Plantões</h6>
+            {% if future_shifts %}
+                <ul class="list-unstyled">
+                {% for shift in future_shifts %}
+                    <li>{{ shift.shift_date.strftime('%d/%m/%Y') }} - {{ shift.shift_type.value }} ({{ shift.start_time.strftime('%H:%M') }})</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Nenhum plantão futuro agendado.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-3">
+            <h6>📜 Histórico Recente</h6>
+            {% if past_shifts %}
+                <ul class="list-unstyled">
+                {% for shift in past_shifts %}
+                    <li>{{ shift.shift_date.strftime('%d/%m/%Y') }} - {{ shift.shift_type.value }} ({{ shift.status.value }})</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Nenhum plantão passado.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Solicitar troca (somente se tiver plantão ativo) -->
+{% if current_shift and current_shift.status.value == 'agendado' %}
+<div class="card border-0 shadow-sm p-4 mt-4">
+    <h5><i class="fas fa-exchange-alt"></i> Solicitar Troca de Plantão</h5>
+    <form method="POST" action="{{ url_for('request_swap') }}">
+        <input type="hidden" name="shift_assignment_id" value="{{ current_shift.id }}">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Escolha o colega para trocar</label>
+                <select name="target_user_id" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    {% for user in User.query.filter(User.role != UserRole.PATIENT, User.id != session.get('user_id')).all() %}
+                        <option value="{{ user.id }}">{{ user.full_name }} ({{ user.role.value }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Motivo</label>
+                <input type="text" name="reason" class="form-control" placeholder="Ex: Problema de saúde">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-warning"><i class="fas fa-paper-plane"></i> Enviar Solicitação</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

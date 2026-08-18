@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Sinais Vitais{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-heartbeat text-primary me-2"></i>Histórico de Sinais Vitais</h2>
+
+<div class="card p-3 mb-4 border-0 shadow-sm">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-8">
+            <label class="form-label small">Filtrar por paciente</label>
+            <select name="patient_id" class="form-select">
+                <option value="">Todos os pacientes</option>
+                {% for p in patients %}
+                    <option value="{{ p.id }}" {% if filter_patient == p.id %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filtrar</button>
+        </div>
+    </form>
+</div>
+
+{% if vitals %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead><tr><th>Paciente</th><th>Data/Hora</th><th>PA</th><th>FC</th><th>FR</th><th>Temp</th><th>SpO₂</th><th>Dor</th><th>Registrado por</th></tr></thead>
+            <tbody>
+            {% for v in vitals %}
+                <tr>
+                    <td><a href="{{ url_for('patient_detail', id=v.patient_id) }}">{{ v.patient.name }}</a></td>
+                    <td>{{ v.record_date.strftime('%d/%m/%Y %H:%M') if v.record_date else '' }}</td>
+                    <td>{{ v.systolic }}/{{ v.diastolic }}</td>
+                    <td>{{ v.heart_rate }}</td>
+                    <td>{{ v.respiratory_rate }}</td>
+                    <td>{{ v.temperature }}</td>
+                    <td>{{ v.oxygen_saturation }}</td>
+                    <td>{{ v.pain_scale }}</td>
+                    <td>{{ v.created_by or '—' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card p-5 text-center border-0 shadow-sm">
+        <i class="fas fa-heartbeat fa-4x text-muted mb-3"></i>
+        <h4>Nenhum sinal vital registrado</h4>
+        <p class="text-muted">Comece registrando sinais vitais na ficha de um paciente.</p>
+    </div>
+{% endif %}
+{% endblock %}

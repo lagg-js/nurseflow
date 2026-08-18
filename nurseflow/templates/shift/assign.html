@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Atribuir Escala{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-pen-alt text-primary me-2"></i>Atribuir Escala</h2>
+
+<div class="card border-0 shadow-sm p-4 mb-4">
+    <form method="POST">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Profissional</label>
+                <select name="user_id" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.full_name }} ({{ user.role.value }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Turno</label>
+                <select name="shift_type" class="form-select" required>
+                    <option value="manha">Manhã (07-13)</option>
+                    <option value="tarde">Tarde (13-19)</option>
+                    <option value="noite">Noite (19-07)</option>
+                    <option value="12x36">12x36</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Data</label>
+                <input type="date" name="shift_date" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Início</label>
+                <input type="time" name="start_time" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fim</label>
+                <input type="time" name="end_time" class="form-control" required>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Atribuir Plantão</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<h4 class="mt-4">Plantões Atribuídos</h4>
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead><tr><th>Profissional</th><th>Data</th><th>Turno</th><th>Horário</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for shift in shifts %}
+            <tr>
+                <td>{{ shift.user.full_name }}</td>
+                <td>{{ shift.shift_date.strftime('%d/%m/%Y') }}</td>
+                <td>{{ shift.shift_type.value }}</td>
+                <td>{{ shift.start_time.strftime('%H:%M') }} - {{ shift.end_time.strftime('%H:%M') }}</td>
+                <td>
+                    {% if shift.status.value == 'em_andamento' %}
+                        <span class="badge bg-success">Em andamento</span>
+                    {% elif shift.status.value == 'agendado' %}
+                        <span class="badge bg-warning text-dark">Agendado</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ shift.status.value }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

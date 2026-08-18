@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Relatório de Passagem{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-medical-alt text-primary me-2"></i>Relatório de Passagem</h2>
+    <button class="btn btn-success" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+</div>
+
+<div class="card border-0 shadow-sm p-3 mb-3">
+    <div class="row">
+        <div class="col-md-6"><strong>Gerado por:</strong> {{ report.generated_by }}</div>
+        <div class="col-md-6"><strong>Data/Hora:</strong> {{ report.generated_at }}</div>
+        <div class="col-md-6"><strong>Turno:</strong> {{ report.shift }}</div>
+        <div class="col-md-6"><strong>Total Pacientes:</strong> {{ report.total_patients }}</div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card bg-danger text-white p-3">
+            <h5><i class="fas fa-exclamation-triangle"></i> Alertas</h5>
+            <h2>{{ report.summary.total_alerts }}</h2>
+            <small>Pacientes com alergias</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark p-3">
+            <h5><i class="fas fa-heartbeat"></i> Sinais Alterados</h5>
+            <h2>{{ report.summary.total_abnormal }}</h2>
+            <small>Últimas 12h</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white p-3">
+            <h5><i class="fas fa-clipboard-list"></i> Ocorrências</h5>
+            <h2>{{ report.summary.total_critical_notes }}</h2>
+            <small>Anotações críticas</small>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h5><i class="fas fa-users"></i> Pacientes com Alergias</h5>
+    <ul>
+    {% for p in report.allergy_alerts %}
+        <li><a href="{{ url_for('patient_detail', id=p.id) }}">{{ p.name }}</a> - <span class="badge bg-warning text-dark">{{ p.allergies_description }}</span></li>
+    {% endfor %}
+    </ul>
+</div>
+
+<div class="mt-4">
+    <h5><i class="fas fa-chart-line"></i> Sinais Vitais Alterados (últimas 12h)</h5>
+    {% for patient_id, vitals in report.abnormal_vitals.items() %}
+        <div class="card p-2 mb-2">
+            <strong>Paciente: {{ vitals[0].patient.name }}</strong>
+            {% for v in vitals %}
+                <div class="ms-3 small">
+                    {{ v.record_date.strftime('%H:%M') }} - 
+                    PA: {{ v.systolic }}/{{ v.diastolic }} | 
+                    Temp: {{ v.temperature }} | 
+                    SpO2: {{ v.oxygen_saturation }}%
+                    <span class="text-danger">⚠️</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>
+
+<div class="mt-4">
+    <h5><i class="fas fa-clipboard-list"></i> Ocorrências Críticas</h5>
+    {% if report.critical_notes %}
+        <ul>
+        {% for note in report.critical_notes %}
+            <li>{{ note.created_at.strftime('%d/%m %H:%M') }} - {{ note.content[:100] }}{% if note.content|length > 100 %}...{% endif %}</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted">Nenhuma ocorrência crítica nas últimas 12h.</p>
+    {% endif %}
+</div>
+{% endblock %}
