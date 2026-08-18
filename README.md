@@ -3,7 +3,7 @@
 Sistema de apoio à organização e acompanhamento da assistência de enfermagem, com gestão de plantões e relatório de passagem de turno.
 
 ## 🔗 Link para o WebApp
-👉 **[Acesse o NurseFlow](https://nurseflow.onrender.com)**
+👉 **[Acesse o NurseFlow](https://nurseflow.onrender.com/)**
 
 ## 👥 Contas para Teste
 
